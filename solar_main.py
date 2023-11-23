@@ -9,7 +9,7 @@ from solar_objects import *
 import thorpy
 import time
 import numpy as np
-
+from tkinter import filedialog
 timer = None
 
 alive = True
@@ -66,9 +66,9 @@ def open_file():
     global space_objects
     global browser
     global model_time
-
+    #print(help(filedialog))
     model_time = 0.0
-    in_filename = "solar_system.txt"
+    in_filename = filedialog.askopenfilename()   
     space_objects = read_space_objects_data_from_file(in_filename)
     max_distance = max([max(abs(obj.obj.x), abs(obj.obj.y)) for obj in space_objects])
     calculate_scale_factor(max_distance)
@@ -141,7 +141,7 @@ def main():
     pg.init()
     
     width = 1000
-    height = 900
+    height = 760
     screen = pg.display.set_mode((width, height))
     last_time = time.perf_counter()
     drawer = Drawer(screen)
@@ -158,7 +158,7 @@ def main():
 
         last_time = cur_time
         drawer.update(space_objects, box)
-        time.sleep(1.0 / 60)
+        #time.sleep(1.0 / 60)
 
     print('Modelling finished!')
     pg.quit()
