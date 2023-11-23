@@ -4,7 +4,7 @@ import math
 gravitational_constant = 6.67408E-11
 """Гравитационная постоянная Ньютона G"""
 
-#hgf
+
 def calculate_force(body, space_objects):
     """Вычисляет силу, действующую на тело.
 
@@ -43,31 +43,34 @@ def move_space_object(body, t,space_objects):
 
     **body** — тело, которое нужно переместить.
     """
-    x,y = body.x,body.y  # FIXME: Вывести формулы для ускорения, скоростей и координат
-    Fx,Fy=body.Fx,body.Fy
-    ax = body.Fx/body.m
-    ay = body.Fy/body.m
-    i=1
-    dt1=t/i
-    oldvx=body.Vx
-    oldvy=body.Vy
-    oldax=ax
-    olday=ay
-    body.Vx+=ax*dt1
-    body.Vy+=ay*dt1
-    body.x+=body.Vx
-    body.y+=body.Vy
-    i+=1
-    while abs((body.Vx-oldvx)/body.vx)>0.07 and abs((body.Vy-oldvy)/body.vy)>0.07 and abs((body.Vy-oldvy)/body.vy)>0.07 and abs((body.Vy-oldvy)/body.vy)>0.07:
+    calculate_force(body,space_objects)
+    while t>0:
+        i=1
         dt=t/i
-        body.Vx=oldvx+ax*dt
-        body.Vy=oldvy+ay*dt
-        i+=1
-        body.x+=body.Vx
-        body.y+=body.Vy
         oldax=body.Fx/body.m
         olday=body.Fy/body.m
+        oldvx=body.Vx
+        oldvy=body.Vy
+        body.Vx+=body.Fx/body.m*dt
+        body.Vy+=body.Fy/body.m*dt
+        oldx=body.x
+        oldy=body.y
+        body.x+=body.Vx*dt
+        body.y+=body.Vy*dt
         calculate_force(body,space_objects)
+        i+=1
+        while abs((body.Vx-oldvx)/body.vx)>0.07 and abs((body.Vy-oldvy)/body.vy)>0.07 and abs((body.Fy/body.m-olday)/olday)>0.07 and abs((body.Fx/body.m-oldax)/oldax)>0.07:
+            dt=t/i
+            body.x=oldx
+            body.y=oldy
+            calculate_force(body,space_objects)
+            body.Vx=oldvx+body.Fx/body.m*dt
+            body.Vy=oldvy+body.Fy/body.m*dt
+            body.x+=body.Vx
+            body.y+=body.Vy
+            calculate_force(body,space_objects)
+            i+=1
+        t-=dt
 
 def recalculate_space_objects_positions(space_objects, t):
     """Пересчитывает координаты объектов.
@@ -78,8 +81,6 @@ def recalculate_space_objects_positions(space_objects, t):
 
     **dt** — шаг по времени
     """
-    for body in space_objects:
-        fx,fycalculate_force(body, space_objects)
     for body in space_objects:
         move_space_object(body, t, space_objects)
 
