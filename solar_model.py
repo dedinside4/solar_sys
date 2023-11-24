@@ -3,34 +3,27 @@
 import math
 import numpy as np
 from scipy.optimize import minimize
+from scipy.optimize import root_scalar
 import pandas
 gravitational_constant = 6.67408E-11
 """Гравитационная постоянная Ньютона G"""
 
 
-def calculate_force(x,y,m):
-    """Вычисляет силу, действующую на тело.
-
-    Параметры:
-
-    **body** — тело, для которого нужно вычислить дейстующую силу.
-
-    **space_objects** — список объектов, которые воздействуют на тело.
+def calculate_acceleration(x,y,m):
+    """Вычисляет силу, действующую на тела.
     """
 
-    Fx=[]
-    Fy=[]
+    Ax=[]
+    Ay=[]
     for j in range(len(x)):
         r = np.sqrt((x[j] - x)**2 + (y[j] - y)**2)
-        f=m*m[j]*gravitational_constant/r**2
+        a=m*gravitational_constant/r**2
         an=np.arctan2(y-y[j],x-x[j])
-        #print(f,an,f*np.cos(an),np.nan_to_num(f*np.cos(an)))
-        fx=(np.nan_to_num(f*np.cos(an),posinf=0,neginf=0)).sum()
-        fy=(np.nan_to_num(f*np.sin(an),posinf=0,neginf=0)).sum()
-        #print(f*np.cos(an),f*np.sin(an),fy,fx)
-        Fx.append(fx)
-        Fy.append(fy)
-    return np.array(Fx),np.array(Fy)
+        ax=(np.nan_to_num(a*np.cos(an),posinf=0,neginf=0)).sum()
+        ay=(np.nan_to_num(a*np.sin(an),posinf=0,neginf=0)).sum()
+        Ax.append(ax)
+        Ay.append(ay)
+    return np.array(Ax),np.array(Ay)
 def move_space_objects(t,space_objects):
     """Перемещает тело в соответствии с действующей на него силой.
 
@@ -38,9 +31,8 @@ def move_space_objects(t,space_objects):
 
     **body** — тело, которое нужно переместить.
     """
-    e_speed=0.01
-    max_speed_std=20
-    max_a_std=0.00000001
+    min_dt=1000
+    maxpe=0.00001
     #calculate_force(body,space_objects)
     #step(body, t)
     vx=np.array([body.Vx for body in space_objects])
@@ -48,44 +40,26 @@ def move_space_objects(t,space_objects):
     x=np.array([body.x for body in space_objects])
     y=np.array([body.y for body in space_objects])
     m=np.array([body.m for body in space_objects])
-    fx,fy=calculate_force(x,y,m)
     while t>0:
-        ax=fx/m
-        ay=fy/m
-        #print(ax,ay)
-        minv1=min(min(abs(max_speed_std/ax)),min(abs(max_speed_std/ay)))
-        minv2=min(min(vx*e_speed/ax),min(vy*e_speed/ay))
-        #mina=minimize(stda,0, args=(x,y,vx,vy,fx,fy,m,max_a_std), bounds=[(0,t)]).x
-        #print(minv,mina)
-        #print(minimize(stda,0, args=(x,y,vx,vy,fx,fy,m,max_a_std), bounds=[(0,t)]).fun)
-        dt=min(max(minv1,minv2),t)#min(minv,mina)
-##        oldx=x
-##        oldy=y
-##        oldvx=vx
-##        oldvy=vy
-        x,y,vx,vy=teylor(x,y,vx,vy,m,fx,fy,dt)
-##        oldfx=fx
-##        oldfy=fy
-        fx,fy=calculate_force(x,y,m)
-##        stdax=abs(fx-oldfx)/m
-##        stday=abs(fy-oldfy)/m
-##        stdvx=abs(vx-oldvx)
-##        stdvy=abs(vy-oldvy)
-##        while max(stdax)>max_a_std and max(stday)>max_a_std and max(stdvx)>max_speed_std and max(stdvy)>max_speed_std:
-##            dt/=(i+1)
-##            x=oldx
-##            y=oldy
-##            vx=oldvx
-##            vy=oldvy
-##            fx=oldfx
-##            fy=oldfy
-##            x,y,vx,vy=teylor(x,y,vx,vy,m,fx,fy,dt)
-##            fx,fy=calculate_force(x,y,m)
-##            stdax=abs(fx-oldfx)/m
-##            stday=abs(fy-oldfy)/m
-##            stdvx=abs(vx-oldvx)
-##            stdvy=abs(vy-oldvy)
+        ax,ay=calculate_acceleration(x,y,m)
+        #print(teylor_min(10**(-18),x,y,vx,vy,ax,ay,m,maxpe),teylor_min(t,x,y,vx,vy,ax,ay,m,maxpe))
+        try:
+            res=root_scalar(teylor_min, args=(x,y,vx,vy,ax,ay,m,maxpe), bracket=(0,t), x0=t/2, x1=t/4, maxiter=13)
+            dt=min(res.root,t)
+        except:
+            dt=t
+        #print(res)
+        x,y,vx,vy=teylorpast(x,y,vx,vy,m,ax,ay, dt)
+        #cont,ax1,ay1,x1,y1=teylor(dt,x,y,vx,vy,ax,ay,m,maxpe)
+        #while cont:
+            #dt/=2
+            #dt=root_scalar(teylor, args=(x,y,vx,vy,ax,ay,m,maxpe), bracket=(0,dt), x0=dt/2, x1=dt/4, maxiter=13)
+            #cont,ax1,ay1,x1,y1=teylor(dt,x,y,vx,vy,ax,ay,m,maxpe)
+        #vx=vx+ax*dt
+        #vy=vy+ay*dt
+        #x,y,ax,ay=x1,y1,ax1,ay1
         t-=dt
+    #print('moved')
     for i in range(len(space_objects)):
         space_objects[i].Vx=vx[i]
         space_objects[i].Vy=vy[i]
@@ -95,17 +69,26 @@ def move_space_objects(t,space_objects):
         
     #print('calculated')
     #print(body.Fx/body.m,body.Fy/body.m,body.Vx,body.Vy,body.x,body.y)
-def teylor(x,y,vx,vy,m,fx,fy, dt):
-    x=x+vx*dt+(fy/m)*dt**2/2
-    y=y+vy*dt+(fy/m)*dt**2/2
-    vx=vx+fx/m*dt
-    vy=vy+fy/m*dt
+def teylorpast(x,y,vx,vy,m,ax,ay, dt):
+    x=x+vx*dt+ax*dt**2/2
+    y=y+vy*dt+ay*dt**2/2
+    vx=vx+ax*dt
+    vy=vy+ay*dt
     return x,y,vx,vy
-def stda(dt,x,y,vx,vy,fx,fy,m,a):
-    x=x+vx*dt+(fx/m)*dt**2/2
-    y=y+vy*dt+(fy/m)*dt**2/2
-    fx1,fy1=calculate_force(x,y,m)
-    return max(max(abs((fx1-fx)/m)-a),max(abs((fy1-fy)/m)-a))
+def teylor(dt,x,y,vx,vy,ax,ay,m,e):
+    px=abs(vx/(dt**2)+ax/dt)
+    py=abs(vy/(dt**2)+ay/dt)
+    x=x+vx*dt+(ax)*(dt**2)/2
+    y=y+vy*dt+(ay)*(dt**2)/2
+    ax1,ay1=calculate_acceleration(x,y,m)
+    return (not (((abs((ax1-ax)/(dt*px))<=e).all() or (px==0).any()) and ((abs((ay1-ay)/(dt*py))<=e).all() or (py==0).any()))),ax1,ay1,x,y
+def teylor_min(dt,x,y,vx,vy,ax,ay,m,e):
+    px=np.nan_to_num(1/abs(vx/dt+ax),posinf=0,neginf=0)
+    py=np.nan_to_num(1/abs(vy/dt+ay),posinf=0,neginf=0)
+    x=x+vx*dt+(ax)*(dt**2)/2
+    y=y+vy*dt+(ay)*(dt**2)/2
+    ax1,ay1=calculate_acceleration(x,y,m)
+    return max(max(abs((ax1-ax)*px)-e),max(abs((ay1-ay)*py)-e))
 def recalculate_space_objects_positions(space_objects, t):
     """Пересчитывает координаты объектов.
 
