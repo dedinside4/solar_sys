@@ -23,13 +23,16 @@ scale_factor = 1
 Тип: float
 
 Мера: количество пикселей на один метр."""
+standart_factor = 1
 
-
-def calculate_scale_factor(max_distance):
+def calculate_scale_factor(max_distance,init):
     """Вычисляет значение глобальной переменной **scale_factor** по данной характерной длине"""
+    global standart_factor
     global scale_factor
     scale_factor = 0.5*min(window_height, window_width)/max_distance
-    print('Scale factor:', scale_factor)
+    if init:
+        standart_factor = scale_factor
+    #print('Scale factor:', scale_factor)
 
 
 def scale_x(x):
@@ -86,4 +89,4 @@ class DrawableObject:
 
     def draw(self, surface):
         #print(scale_x(self.obj.x),scale_y(self.obj.y))
-        pg.draw.circle(surface, self.obj.color,(scale_x(self.obj.x),scale_y(self.obj.y)),self.obj.R)
+        pg.draw.circle(surface, self.obj.color,(scale_x(self.obj.x),scale_y(self.obj.y)),max(1,self.obj.R*scale_factor/standart_factor))

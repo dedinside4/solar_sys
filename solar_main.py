@@ -1,4 +1,4 @@
-# coding: utf-8
+1# coding: utf-8
 # license: GPLv3
 
 import pygame as pg
@@ -27,7 +27,7 @@ time_scale = 1000.0
 
 space_objects = []
 """Список космических объектов."""
-
+max_distance = 0
 def execution(delta):
     """Функция исполнения -- выполняется циклически, вызывая обработку всех небесных тел,
     а также обновляя их положение на экране.
@@ -66,20 +66,27 @@ def open_file():
     global space_objects
     global browser
     global model_time
+    global max_distance
     #print(help(filedialog))
     model_time = 0.0
     in_filename = filedialog.askopenfilename()   
     space_objects = read_space_objects_data_from_file(in_filename)
     max_distance = max([max(abs(obj.obj.x), abs(obj.obj.y)) for obj in space_objects])
-    calculate_scale_factor(max_distance)
+    calculate_scale_factor(max_distance, True)
 
 def handle_events(events, menu):
     global alive
+    global max_distance
     for event in events:
         menu.react(event)
         if event.type == pg.QUIT:
             alive = False
-
+        elif event.type == pg.MOUSEWHEEL:
+            if event.y==-1:
+                max_distance*=1.1
+            else:
+                max_distance/=1.1 
+            calculate_scale_factor(max_distance, False)    
 def slider_to_real(val):
     return np.exp(5 + val)
 
@@ -139,7 +146,6 @@ def main():
     physical_time = 0
 
     pg.init()
-    
     width = 1000
     height = 760
     screen = pg.display.set_mode((width, height))
