@@ -20,7 +20,7 @@ Planet Jupiter 3 brown 7.15E7 1.899E27 778.41E9 0 0 13.07E3
 Planet Saturn 3 white 6.03E7 5.685E26 1429.4E9 0 0 9.67E3
 
 # Уран
-#Planet Uranus 2 grey 2.56E7 8.685E25 2871.0E9 0 0 6.84E3
+Planet Uranus 2 grey 2.56E7 8.685E25 2871.0E9 0 0 6.84E3
 
 # Нептун
-#Planet Neptune 2 blue 2.46E7 1.024E26 4498.3E9 0 0 5.48E3
+Planet Neptune 2 blue 2.46E7 1.024E26 4498.3E9 0 0 5.48E3

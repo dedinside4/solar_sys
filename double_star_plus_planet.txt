@@ -1,0 +1,4 @@
+# Двойная звезда
+Star Alpha 30 white 1E10 1E31 4E10 0 0 5E4
+Star Omega 30 cyan 1E10 1E31 -4E10 0 0 -5E4
+Planet Dark_Giant 10 red 1E8 7E28 0 2E11 50E3 0

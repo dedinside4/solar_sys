@@ -39,7 +39,7 @@ def parse_star_parameters(line, star):
 
     Входная строка должна иметь слеюущий формат:
 
-    Star <радиус в пикселах> <цвет> <масса> <x> <y> <Vx> <Vy>
+    <type> <name> <R> <color> <real_radius> <m> <x> <y> <Vx> <Vy>
 
     Здесь (x, y) — координаты зведы, (Vx, Vy) — скорость.
 
@@ -53,7 +53,17 @@ def parse_star_parameters(line, star):
 
     **star** — объект звезды.
     """
-    pass  # FIXME: допишите парсер
+    a=line.split()
+    star.name=a[1]
+    star.R=float(a[2])
+    star.color=a[3]
+    star.real_radius=float(a[4])
+    star.m=float(a[5])
+    star.x=float(a[6])
+    star.y=float(a[7])
+    star.Vx=float(a[8])
+    star.Vy=float(a[9])
+  # FIXME: допишите парсер
 
 def parse_planet_parameters(line, planet):
     """Считывает данные о планете из строки.
@@ -73,7 +83,17 @@ def parse_planet_parameters(line, planet):
 
     **planet** — объект планеты.
     """
-    pass  # FIXME: допишите парсер
+    a=line.split()
+    planet.name=a[1]
+    planet.R=float(a[2])
+    planet.color=a[3]
+    planet.real_radius=float(a[4])
+    planet.m=float(a[5])
+    planet.x=float(a[6])
+    planet.y=float(a[7])
+    planet.Vx=float(a[8])
+    planet.Vy=float(a[9])
+ # FIXME: допишите парсер
 
 def write_space_objects_data_to_file(output_filename, space_objects):
     """Сохраняет данные о космических объектах в файл.
@@ -93,7 +113,9 @@ def write_space_objects_data_to_file(output_filename, space_objects):
     with open(output_filename, 'w') as out_file:
         for obj in space_objects:
             print(out_file, "%s %d %s %f" % ('1', 2, '3', 4.5))
-            # FIXME!
+            s=obj.type.capitalize()+' '+str(obj.R)+' '+obj.color+' '+str(obj.m)+' '+str(obj.x)+' '+str(obj.y)+' '+str(obj.Vx)+' '+str(obj.Vy)+'/n'
+            out_file.write(s)
+        out_file.close()
 
 
 if __name__ == "__main__":

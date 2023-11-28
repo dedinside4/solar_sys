@@ -1,0 +1,13 @@
+# Солнечная система -- только Солнце и Земля
+Star Deblu 8 blue 6.68E8 1.78E30 4.34E10 6.14E10 2.3E4 0.1E4
+
+Star Wisser 8 white 6.34E8 1.99E30 -6.89E10 5.44E10 -1.1E4 -3.1E4
+
+Star Ovet 8 red 6.87E8 1.86E30 3.94E9 -8.74E10 3.5E4 0
+
+# Земля
+Planet Drohat 2 brown 6.83E6 7.13E24 -1.34E12 1.14E12 -4.71E4 0
+
+Planet Fukil 2 grey 4.36E6 3.79E24 -9.10E11 -8.41E11 2.31E4 -1.11E4
+
+Planet Lopan 2 red 5.18E6 6.95E24 1.11E12 -1.11E12 2.12E4 3.23E4
