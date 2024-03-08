@@ -181,7 +181,6 @@ def slider_reaction(event):
 
 def init_ui(screen):
     global browser
-    help(thorpy.Inserter)
     slider = thorpy.SliderX(100, (0, 16), "Simulation speed")
     slider.user_func = slider_reaction
     button_stop = thorpy.make_button("Quit", func=stop_execution)

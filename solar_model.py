@@ -5,154 +5,130 @@ import numpy as np
 from scipy.optimize import minimize
 from scipy.optimize import root_scalar
 import pandas
+
 gravitational_constant = 6.67408E-11
 """Гравитационная постоянная Ньютона G"""
 
+accuracy = 0.0001
 
-def calculate_acceleration(x,y,m):
-    """Вычисляет силу, действующую на тела.
-    """
+maximum_iterations = 1000000
 
-    Ax=[]
-    Ay=[]
-    for j in range(len(x)):
-        r = np.sqrt((x[j] - x)**2 + (y[j] - y)**2)
-        a=m*gravitational_constant/r**2
-        an=np.arctan2(y-y[j],x-x[j])
-        ax=(np.nan_to_num(a*np.cos(an),posinf=0,neginf=0)).sum()
-        ay=(np.nan_to_num(a*np.sin(an),posinf=0,neginf=0)).sum()
-        Ax.append(ax)
-        Ay.append(ay)
-    return np.array(Ax),np.array(Ay)
-def calculate_acceleration_2(rs,m,rt):
-    """Вычисляет силу, действующую на тела.
+number_of_time_intervals = 1
+
+def calculate_acceleration(stars_position, stars_mass, object_position):
+    """Вычисляет ускорение тела, под действием звезд.
     """
-    r=rs-rt
-    l=np.linalg.norm(r,axis=1)
-    k=m*gravitational_constant/l**3
-    a=r*k[:, np.newaxis]
-    a=(np.nan_to_num(a,posinf=0,neginf=0)).sum(axis=0)
-    #print(a, ' - ускорение')
-    #print(rs,rt, ' - координаты всех тел и ускоряемого')
-    return a
-def move_space_objects(t,space_objects):
+    distances_vector = stars_position - object_position
+    distances = np.linalg.norm(distances_vector, axis=1)
+
+    abs_accelerations = stars_mass * gravitational_constant / distances**3
+
+    accelerations = distances_vector * abs_accelerations[:, np.newaxis]
+    acceleration = accelerations.sum(axis=0)
+    
+    #print(acceleration)
+    return acceleration
+
+def find_derivative_of_acceleration(stars_position, planets_position, stars_acceleration, planets_acceleration, stars_speed, planets_speed, time, stars_mass):
+    stars_derivative_of_acceleration = np.zeros((len(stars_position),2))
+    planets_derivative_of_acceleration = np.zeros((len(planets_position),2))
+
+    stars_derivative_change = np.zeros((len(stars_position)))
+    planets_derivative_change = np.zeros((len(planets_position)))
+
+    stars_acceleration_new = np.zeros((len(stars_position),2))
+    planets_acceleration_new = np.zeros((len(planets_position),2))
+
+    for i in range(maximum_iterations):
+        planets_position_new, stars_position_new = move_the_world(time, stars_position, stars_acceleration, stars_speed, planets_position, planets_acceleration, planets_speed, stars_derivative_of_acceleration, planets_derivative_of_acceleration)
+
+        for i in range(len(stars_position)):
+            stars_acceleration_new[i] = calculate_acceleration(np.delete(stars_position_new, i, axis=0), np.delete(stars_mass, i, axis=0), stars_position_new[i])
+        for i in range(len(planets_position)):
+            planets_acceleration_new[i] = calculate_acceleration(stars_position_new, stars_mass, planets_position_new[i])
+
+        stars_derivative_of_acceleration_last = stars_derivative_of_acceleration
+        planets_derivative_of_acceleration_last = planets_derivative_of_acceleration
+        stars_derivative_of_acceleration = (stars_acceleration_new - stars_acceleration) / time
+        planets_derivative_of_acceleration = (planets_acceleration_new - planets_acceleration) / time
+
+        stars_derivative_change = np.linalg.norm(stars_derivative_of_acceleration - stars_derivative_of_acceleration_last, axis=1)
+        planets_derivative_change = np.linalg.norm(planets_derivative_of_acceleration - planets_derivative_of_acceleration_last, axis=1)
+        
+        #print(stars_derivative_change , np.linalg.norm(stars_derivative_of_acceleration, axis=1), planets_derivative_change , np.linalg.norm(planets_derivative_of_acceleration, axis=1))
+        if len(stars_position) > 1 and len(planets_position) > 0 and max((stars_derivative_change / np.linalg.norm(stars_derivative_of_acceleration, axis=1)).max(), (planets_derivative_change / np.linalg.norm(planets_derivative_of_acceleration, axis=1)).max()) < accuracy:
+            break
+        elif len(planets_position) == 0 and (stars_derivative_change / np.linalg.norm(stars_derivative_of_acceleration, axis=1)).max() < accuracy:
+            break
+        elif len(stars_position) == 1 and (planets_derivative_change / np.linalg.norm(planets_derivative_of_acceleration, axis=1)).max() < accuracy:
+            break
+
+    return change_the_world(time, stars_position, stars_acceleration, stars_speed, planets_position, planets_acceleration, planets_speed, stars_derivative_of_acceleration, planets_derivative_of_acceleration)
+    
+    
+    
+def change_the_world(time, stars_position, stars_acceleration, stars_speed, planets_position, planets_acceleration, planets_speed, stars_derivative_of_acceleration, planets_derivative_of_acceleration):
+    planets_position, stars_position = move_the_world(time, stars_position, stars_acceleration, stars_speed, planets_position, planets_acceleration, planets_speed, stars_derivative_of_acceleration, planets_derivative_of_acceleration)
+    
+    planets_speed = planets_speed + planets_acceleration*time + (planets_derivative_of_acceleration*time**2)/2
+    stars_speed = stars_speed + stars_acceleration*time + (stars_derivative_of_acceleration*time**2)/2
+
+    return planets_position, stars_position, planets_speed, stars_speed
+    
+
+def move_the_world(time, stars_position, stars_acceleration, stars_speed, planets_position, planets_acceleration, planets_speed, stars_derivative_of_acceleration, planets_derivative_of_acceleration):
+    #print(planets_position, planets_acceleration, planets_speed, planets_derivative_of_acceleration)
+    planets_position = planets_position + planets_speed*time + (planets_acceleration*time**2)/2 + (planets_derivative_of_acceleration*time**3)/6
+    stars_position = stars_position + stars_speed*time + (stars_acceleration*time**2)/2 + (stars_derivative_of_acceleration*time**3)/6
+
+    return planets_position, stars_position
+
+def move_space_objects(total_time, stars, planets):
     """Перемещает тело в соответствии с действующей на него силой.
 
     Параметры:
 
     **body** — тело, которое нужно переместить.
     """
-    maxpe=0.00001
-    vx=np.array([body.Vx for body in space_objects])
-    vy=np.array([body.Vy for body in space_objects])
-    x=np.array([body.x for body in space_objects])
-    y=np.array([body.y for body in space_objects])
-    m=np.array([body.m for body in space_objects])
-    while t>0:
-        ax,ay=calculate_acceleration(x,y,m)
-        try:
-            res=root_scalar(teylor_min, args=(x,y,vx,vy,ax,ay,m,maxpe), bracket=(10**(-7),t), x0=t/2, x1=t/4)#, maxiter=13)
-            dt=res.root
-        except Exception as e:
-            #print(e)
-            dt=t
-        x,y,vx,vy=teylor(x,y,vx,vy,m,ax,ay,dt)
-        t-=dt
-    for i in range(len(space_objects)):
-        space_objects[i].Vx=vx[i]
-        space_objects[i].Vy=vy[i]
-        space_objects[i].y=y[i]
-        space_objects[i].x=x[i]
-def teylor(x,y,vx,vy,m,ax,ay,dt):
-    x=x+vx*dt+ax*dt**2/2
-    y=y+vy*dt+ay*dt**2/2
-    vx=vx+ax*dt
-    vy=vy+ay*dt
-    return x,y,vx,vy
-def teylor_min(dt,x,y,vx,vy,ax,ay,m,e):
-    px=vx/dt+ax/2
-    py=vy/dt+ay/2
-    l=px**2+py**2
-    x=x+vx*dt+(ax)*(dt**2)/2
-    y=y+vy*dt+(ay)*(dt**2)/2
-    ax1,ay1=calculate_acceleration(x,y,m)
-    da=(ax1-ax)**2+(ay1-ay)**2
-    #print(dt, ' - время')
-    #print(da, ' - изменение ускорения')
-    #print(l, ' - какая то фигня')
-    return max(da/l)-e**2
-def move_space_objects_2(t,stars, planets):
-    """Перемещает тело в соответствии с действующей на него силой.
-
-    Параметры:
-
-    **body** — тело, которое нужно переместить.
-    """
-    maxpe=0.0006
-    vs=np.array([np.array([body.Vx, body.Vy]) for body in stars])
-    rs=np.array([np.array([body.x, body.y]) for body in stars])
-    m=np.array([body.m for body in stars])
-    if len(planets)>0:
-        vp=np.array([np.array([body.Vx, body.Vy]) for body in planets])
-        rp=np.array([np.array([body.x, body.y]) for body in planets])
-    else:
-        vp=np.array([[np.NaN,np.NaN]])
-        rp=np.array([[np.NaN,np.NaN]])
-    dt=t
-    while t>0:
-        acs=np.array([])
-        for i in range(len(m)):
-            a=calculate_acceleration_2(rs,m,rs[i])
-            acs=np.append(acs,a)
-        acs=np.reshape(acs, (len(m),2), order='C')
-        acp=np.array([])
-        for i in range(len(rp)):
-            a=calculate_acceleration_2(rs,m,rp[i])
-            acp=np.append(acp,a)
-        acp=np.reshape(acp, (len(rp),2), order='C')
-        try:
-            res=root_scalar(teylor_min_2, args=(rs,rp,vs,vp,acs,acp,m,maxpe),method='brenth',bracket=[dt,t],rtol=0.0001) #bracket=(10**(-7),dt))#, maxiter=1)
-            dt=res.root
-        except Exception as e:
-            try:
-                res=root_scalar(teylor_min_2, args=(rs,rp,vs,vp,acs,acp,m,maxpe),method='brenth',bracket=[0,dt],rtol=0.0001)#, maxiter=1)
-                dt=res.root
-            except Exception as e:
-                #print(e)
-                dt=t
-        #print(acs)
-        rs,vs=teylor_2(rs,vs,acs,dt)
-        rp,vp=teylor_2(rp,vp,acp,dt)
-        t-=dt
+    stars_speed = np.zeros((len(stars),2))
+    stars_position = np.zeros((len(stars),2))
     for i in range(len(stars)):
-        stars[i].Vx,stars[i].Vy=vs[i]
-        stars[i].x,stars[i].y=rs[i]
+        stars_speed[i] = np.array([stars[i].Vx, stars[i].Vy])
+        stars_position[i] = np.array([stars[i].x, stars[i].y])
+
+    stars_mass = np.array([body.m for body in stars])
+
+    planets_speed = np.zeros((len(planets),2))
+    planets_position = np.zeros((len(planets),2))
     for i in range(len(planets)):
-        planets[i].Vx,planets[i].Vy=vp[i]
-        planets[i].x,planets[i].y=rp[i]
-def teylor_2(r,v,ac,dt):
-    r=r+v*dt+ac*(dt**2)/2
-    v=v+ac*dt
-    return r,v
-def teylor_min_2(dt,rs,rp,vs,vp,acs,acp,m,e):
-    rs=rs+vs*dt+acs*(dt**2)/2
-    acs1=np.array([])
-    for i in range(len(m)):
-        a=calculate_acceleration_2(rs,m,rs[i])
-        acs1=np.append(acs1,a)
-    acs1=np.reshape(acs1, (len(m),2), order='C')
-    rp=rp+vp*dt+acp*(dt**2)/2
-    acp1=np.array([])
-    for i in range(len(rp)):
-        a=calculate_acceleration_2(rs,m,rp[i])
-        acp1=np.append(acp1,a)
-    acp1=np.reshape(acp1, (len(rp),2), order='C')
-    das=np.linalg.norm(acs1-acs,axis=1)
-    dap=np.linalg.norm(acp1-acp,axis=1)
-    acs=np.linalg.norm(acs,axis=1)
-    acp=np.linalg.norm(acp,axis=1)
-    return max(max(np.nan_to_num(das/acs,posinf=0,neginf=0)),max(np.nan_to_num(dap/acp,posinf=0,neginf=0)))-e
-def recalculate_space_objects_positions(space_objects, t):
+        planets_speed[i] = np.array([planets[i].Vx, planets[i].Vy])
+        planets_position[i] = np.array([planets[i].x, planets[i].y])
+
+    stars_acceleration = np.zeros((len(stars_position),2))
+    planets_acceleration = np.zeros((len(planets_position),2))
+
+    for i in range(len(stars_position)):
+        stars_acceleration[i] = calculate_acceleration(np.delete(stars_position, i, axis=0), np.delete(stars_mass, i, axis=0), stars_position[i])
+    for i in range(len(planets_position)):
+        planets_acceleration[i] = calculate_acceleration(stars_position, stars_mass, planets_position[i])
+    
+    minimal_time = total_time / number_of_time_intervals  
+
+    while total_time>0:
+        time = min(total_time, minimal_time)   
+        total_time -= time    
+    
+        planets_position, stars_position, planets_speed, stars_speed = find_derivative_of_acceleration(stars_position, planets_position, stars_acceleration, planets_acceleration, stars_speed, planets_speed, time, stars_mass)
+
+    for i in range(len(stars)):
+        stars[i].Vx,stars[i].Vy = stars_speed[i]
+        stars[i].x,stars[i].y = stars_position[i]
+    for i in range(len(planets)):
+        planets[i].Vx,planets[i].Vy = planets_speed[i]
+        planets[i].x,planets[i].y = planets_position[i]
+
+
+def recalculate_space_objects_positions(space_objects, time):
     """Пересчитывает координаты объектов.
 
     Параметры:
@@ -161,9 +137,6 @@ def recalculate_space_objects_positions(space_objects, t):
 
     **dt** — шаг по времени
     """
-##    if len(space_objects)>0:
-##        move_space_objects(t, space_objects)
-
     
     if len(space_objects)>0:
         stars=[]
@@ -173,7 +146,7 @@ def recalculate_space_objects_positions(space_objects, t):
                 stars.append(obj)
             elif obj.type=='planet':
                 planets.append(obj)
-        move_space_objects_2(t, stars, planets)   
+        move_space_objects(time, stars, planets)   
 
 if __name__ == "__main__":
     print("This module is not for direct call!")
